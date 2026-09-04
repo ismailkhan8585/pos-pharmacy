@@ -1,0 +1,212 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+@theme {
+  --color-pos-bg: rgb(9 9 11);
+  --color-pos-panel: rgb(13 13 15);
+  --color-pos-bill: rgb(11 11 13);
+  --color-pos-card: rgb(20 20 24);
+  --color-pos-cardHover: rgb(28 28 33);
+  --color-pos-card-hover: rgb(28 28 33);
+  --color-pos-modal: rgb(18 18 22);
+  --color-pos-border: rgb(35 35 42);
+  --color-pos-borderHi: rgb(55 55 65);
+  --color-pos-border-hi: rgb(55 55 65);
+
+  --font-grotesk: "Space Grotesk", sans-serif;
+  --font-sans: "DM Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-urdu: "Noto Nastaliq Urdu", serif;
+}
+
+:root {
+  --pos-bg:      rgb(9 9 11);
+  --pos-panel:   rgb(13 13 15);
+  --pos-bill:    rgb(11 11 13);
+  --pos-card:    rgb(20 20 24);
+  --pos-border:  rgb(35 35 42);
+  --teal-500:    rgb(16 185 129);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--pos-bg);
+  color: rgb(250 250 250);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(55 55 65);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(75 75 90);
+}
+
+/* POS Touch targets */
+.pos-touch {
+  min-height: 52px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Gradient text */
+.text-gradient-teal {
+  background: linear-gradient(135deg, rgb(16 185 129), rgb(45 212 162));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(18, 18, 26, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Press animation */
+.press-effect {
+  transition: transform 100ms ease;
+}
+.press-effect:active {
+  transform: scale(0.97);
+}
+
+/* Numeric font */
+.font-num {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Urdu font */
+.font-urdu {
+  font-family: 'Noto Nastaliq Urdu', serif;
+  direction: rtl;
+}
+
+/* No scrollbar */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* POS Layout */
+.pos-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--pos-bg);
+}
+
+.pos-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.pos-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--pos-panel);
+}
+
+.pos-right {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--pos-bill);
+  border-left: 1px solid var(--pos-border);
+}
+
+@media (max-width: 768px) {
+  .pos-right {
+    width: 320px;
+  }
+}
+
+/* Receipt styling */
+.receipt-paper {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+  background: white;
+  color: black;
+  padding: 16px;
+  border-radius: 4px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+/* Input focus ring */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  ring-color: rgb(16 185 129);
+}
+
+/* Animate in */
+@keyframes slideInRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.8); opacity: 0; }
+  70%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-slide-in { animation: slideInRight 0.2s ease; }
+.animate-pop-in   { animation: popIn 0.25s ease; }
+
+/* Product tile flash */
+@keyframes flashTeal {
+  0%   { background: rgba(16,185,129,0.3); }
+  100% { background: transparent; }
+}
+
+@keyframes flashRed {
+  0%   { background: rgba(239,68,68,0.3); }
+  100% { background: transparent; }
+}
+
+.flash-teal { animation: flashTeal 0.3s ease; }
+.flash-red  { animation: flashRed 0.3s ease; }
+
+/* Pin dot animation */
+@keyframes dotPop {
+  0%   { transform: scale(0); }
+  60%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+.pin-dot { animation: dotPop 0.15s ease; }
+
+/* Sync Progress Bar */
+@keyframes progress-bar {
+  0%   { width: 0%; margin-left: 0; }
+  50%  { width: 70%; margin-left: 15%; }
+  100% { width: 100%; margin-left: 100%; }
+}
+.animate-progress-bar {
+  animation: progress-bar 1.8s ease-in-out infinite;
+}
