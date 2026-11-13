@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react"
 import { usePOSProductsStore } from "@/stores/pos-products"
 import { usePOSShiftStore } from "@/stores/pos-shift"
+import { usePOSCartStore } from "@/stores/pos-cart"
 import POSHeader from "@/components/pos/POSHeader"
 import OfflineBanner from "@/components/pos/OfflineBanner"
-import ConnectionStatus from "@/components/pos/ConnectionStatus"
-import ProductSearch from "@/components/pos/ProductSearch"
+import ProductSearch, { FOCUS_SEARCH_EVENT } from "@/components/pos/ProductSearch"
 import CategoryTabs from "@/components/pos/CategoryTabs"
 import ProductGrid from "@/components/pos/ProductGrid"
 import BillPanel from "@/components/pos/BillPanel"
@@ -17,12 +17,14 @@ import ReceiptModal from "@/components/pos/ReceiptModal"
 import HoldBillModal from "@/components/pos/HoldBillModal"
 import ReturnModal from "@/components/pos/ReturnModal"
 import OpenShiftModal from "@/components/shifts/OpenShiftModal"
-import { usePOSCartStore } from "@/stores/pos-cart"
+import toast from "react-hot-toast"
+
+const focusSearch = () => setTimeout(() => window.dispatchEvent(new Event(FOCUS_SEARCH_EVENT)), 80)
 
 export default function POSPage() {
-  const { getProductByBarcode } = usePOSProductsStore()
-  const { currentShift } = usePOSShiftStore()
-  const { addItem } = usePOSCartStore()
+  const getProductByBarcode = usePOSProductsStore((s) => s.getProductByBarcode)
+  const shiftStatus = usePOSShiftStore((s) => s.currentShift.status)
+  const addItem = usePOSCartStore((s) => s.addItem)
 
   // Modal states
   const [showBarcode, setShowBarcode] = useState(false)
@@ -33,22 +35,44 @@ export default function POSPage() {
   const [showOpenShift, setShowOpenShift] = useState(false)
   const [receiptData, setReceiptData] = useState<any>(null)
 
+  const anyModalOpen = showBarcode || showPayment || showReceipt || showHold || showReturn || showOpenShift
+
   // Show open shift modal if no shift active
   useEffect(() => {
-    if (currentShift.status !== "OPEN") {
-      setShowOpenShift(true)
+    if (shiftStatus !== "OPEN") setShowOpenShift(true)
+  }, [shiftStatus])
+
+  // Global keyboard shortcuts (only while no dialog is open)
+  useEffect(() => {
+    if (anyModalOpen) return
+    const handler = (e: KeyboardEvent) => {
+      const cartEmpty = usePOSCartStore.getState().items.length === 0
+      if (e.key === "F9" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
+        e.preventDefault()
+        if (cartEmpty) toast("Add items first", { icon: "🛒" })
+        else setShowPayment(true)
+      } else if (e.key === "F4") {
+        e.preventDefault()
+        setShowHold(true)
+      } else if (e.key === "F8") {
+        e.preventDefault()
+        setShowReturn(true)
+      }
     }
-  }, [currentShift.status])
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [anyModalOpen])
 
   const handleBarcodeScanned = (barcode: string) => {
     const product = getProductByBarcode(barcode)
-    if (product) {
-      addItem(product)
-    } else {
-      import("react-hot-toast").then(({ default: toast }) => {
-        toast.error(`Product not found: ${barcode}`)
-      })
+    if (!product) {
+      toast.error(`Product not found: ${barcode}`)
+      return
     }
+    const result = addItem(product)
+    if (result === "added") toast.success(`${product.nameEn} added`, { duration: 1200 })
+    else if (result === "out_of_stock") toast.error(`${product.nameEn} is out of stock`)
+    else toast.error(`Only ${product.stock} in stock`)
   }
 
   const handlePaymentSuccess = (data: any) => {
@@ -60,13 +84,16 @@ export default function POSPage() {
   const handleNewSale = () => {
     setShowReceipt(false)
     setReceiptData(null)
+    focusSearch()
+  }
+
+  const closeAnd = (setter: (v: boolean) => void) => () => {
+    setter(false)
+    focusSearch()
   }
 
   return (
     <>
-      <ConnectionStatus />
-
-      {/* POS Two-Panel Layout */}
       <POSHeader />
       <OfflineBanner />
 
@@ -90,39 +117,22 @@ export default function POSPage() {
       </div>
 
       {/* MODALS */}
-      <BarcodeScanner
-        isOpen={showBarcode}
-        onClose={() => setShowBarcode(false)}
-        onScan={handleBarcodeScanned}
-      />
+      <BarcodeScanner isOpen={showBarcode} onClose={closeAnd(setShowBarcode)} onScan={handleBarcodeScanned} />
 
-      <PaymentModal
-        isOpen={showPayment}
-        onClose={() => setShowPayment(false)}
-        onSuccess={handlePaymentSuccess}
-      />
+      <PaymentModal isOpen={showPayment} onClose={closeAnd(setShowPayment)} onSuccess={handlePaymentSuccess} />
 
       <ReceiptModal
         isOpen={showReceipt}
         receiptData={receiptData}
-        onClose={() => setShowReceipt(false)}
+        onClose={closeAnd(setShowReceipt)}
         onNewSale={handleNewSale}
       />
 
-      <HoldBillModal
-        isOpen={showHold}
-        onClose={() => setShowHold(false)}
-      />
+      <HoldBillModal isOpen={showHold} onClose={closeAnd(setShowHold)} />
 
-      <ReturnModal
-        isOpen={showReturn}
-        onClose={() => setShowReturn(false)}
-      />
+      <ReturnModal isOpen={showReturn} onClose={closeAnd(setShowReturn)} />
 
-      <OpenShiftModal
-        isOpen={showOpenShift}
-        onClose={() => setShowOpenShift(false)}
-      />
+      <OpenShiftModal isOpen={showOpenShift} onClose={closeAnd(setShowOpenShift)} />
     </>
   )
 }

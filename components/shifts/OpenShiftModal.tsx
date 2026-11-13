@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { X, DollarSign, Loader2 } from "lucide-react"
+import { motion } from "framer-motion"
+import { Loader2, Sunrise, CircleCheck, Circle } from "lucide-react"
 import { openShift as openShiftAPI } from "@/lib/supabase"
 import { usePOSShiftStore } from "@/stores/pos-shift"
 import { usePOSSettingsStore } from "@/stores/pos-settings"
+import { Modal, Field, btnPrimary } from "@/components/ui"
 import toast from "react-hot-toast"
 
 interface Props {
@@ -13,15 +14,20 @@ interface Props {
   onClose: () => void
 }
 
+const QUICK = [0, 1000, 2000, 5000, 10000]
+
 export default function OpenShiftModal({ isOpen, onClose }: Props) {
   const [openingCash, setOpeningCash] = useState("")
   const [isOpening, setIsOpening] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
-  const { openShift } = usePOSShiftStore()
-  const { ownerName } = usePOSSettingsStore()
+  const openShift = usePOSShiftStore((s) => s.openShift)
+  const ownerName = usePOSSettingsStore((s) => s.ownerName)
+  const storeName = usePOSSettingsStore((s) => s.storeName)
+
+  const cash = parseFloat(openingCash) || 0
 
   const handleOpen = async () => {
-    const cash = parseFloat(openingCash) || 0
+    if (!confirmed || isOpening) return
     setIsOpening(true)
 
     const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true
@@ -35,31 +41,28 @@ export default function OpenShiftModal({ isOpen, onClose }: Props) {
           operatorName: shift.operator_name,
           openedAt: shift.opened_at,
         })
-        toast.success(`Shift ${shift.shift_number} opened with Rs.${cash}`)
+        toast.success(`Shift ${shift.shift_number} started`)
+        setIsOpening(false)
         onClose()
         return
       } catch (err) {
         console.warn("Could not open shift on cloud, falling back to offline:", err)
-      } finally {
-        setIsOpening(false)
       }
     }
 
-    // Offline Shift Fallback
+    // Offline shift fallback
     try {
       const now = new Date()
       const dateCode = now.toISOString().slice(0, 10).replace(/-/g, "")
       const rand = Math.floor(100 + Math.random() * 900)
       const offlineShiftNumber = `SFT-OFF-${dateCode}-${rand}`
-      const offlineShiftId = `shift-off-${Date.now()}`
-
       openShift(cash, {
-        id: offlineShiftId,
+        id: `shift-off-${Date.now()}`,
         shiftNumber: offlineShiftNumber,
         operatorName: ownerName || "Adil Nawaz",
         openedAt: now.toISOString(),
       })
-      toast.success(`⚡ Shift ${offlineShiftNumber} opened (Offline Mode)`, { icon: "🟡" })
+      toast.success(`Shift ${offlineShiftNumber} started (offline)`)
       onClose()
     } catch (offlineErr: any) {
       toast.error("Failed to open shift: " + (offlineErr?.message || "Unknown error"))
@@ -68,96 +71,91 @@ export default function OpenShiftModal({ isOpen, onClose }: Props) {
     }
   }
 
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      icon={Sunrise}
+      title={`${greeting}, ${(ownerName || "there").split(" ")[0]}`}
+      subtitle={`Start a new shift at ${storeName}`}
+      size="sm"
+    >
+      <form
+        className="p-6 space-y-5"
+        onSubmit={(e) => {
+          e.preventDefault()
+          handleOpen()
+        }}
+      >
+        <Field label="Opening cash in drawer">
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-mono">Rs</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={openingCash}
+              onChange={(e) => {
+                setOpeningCash(e.target.value.replace(/[^0-9]/g, ""))
+                setConfirmed(false)
+              }}
+              placeholder="0"
+              autoFocus
+              className="w-full h-14 pl-12 pr-4 bg-pos-bg border border-pos-border rounded-2xl text-2xl font-mono font-bold text-white placeholder-gray-600 focus:border-teal-500/60 focus:ring-4 focus:ring-teal-500/10 tabular"
+            />
+          </div>
+        </Field>
+
+        <div className="flex flex-wrap gap-2">
+          {QUICK.map((q) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => {
+                setOpeningCash(String(q))
+                setConfirmed(false)
+              }}
+              className={`h-8 px-3 rounded-lg text-xs font-mono border transition-all ${
+                cash === q && openingCash !== ""
+                  ? "border-teal-500/50 bg-teal-500/10 text-teal-300"
+                  : "border-pos-border bg-pos-card text-gray-400 hover:text-white"
+              }`}
+            >
+              {q.toLocaleString("en-PK")}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setConfirmed((v) => !v)}
+          className={`w-full flex items-start gap-3 p-3.5 rounded-xl border text-left text-sm transition-all ${
+            confirmed ? "border-teal-500/50 bg-teal-500/10 text-teal-100" : "border-pos-border bg-pos-card text-gray-300 hover:border-pos-borderHi"
+          }`}
         >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="glass border border-pos-border rounded-2xl w-full max-w-sm mx-4 overflow-hidden"
-          >
-            {/* Header */}
-            <div className="flex flex-col items-center pt-6 pb-4 border-b border-pos-border px-4 text-center">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3"
-                style={{ background: "linear-gradient(135deg, rgb(16 185 129), rgb(5 150 105))" }}
-              >
-                ✚
-              </div>
-              <h3 className="font-grotesk font-bold text-white text-lg">Start New Shift</h3>
-              <p className="text-gray-500 text-sm mt-1">AN MedCare POS — {ownerName}</p>
-            </div>
+          {confirmed ? <CircleCheck className="w-5 h-5 text-teal-300 shrink-0" /> : <Circle className="w-5 h-5 text-gray-500 shrink-0" />}
+          <span>
+            I've counted the drawer and it holds{" "}
+            <span className="font-mono font-semibold text-white">Rs {cash.toLocaleString("en-PK")}</span>
+          </span>
+        </button>
 
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="text-gray-400 text-sm block mb-1.5">
-                  Opening Cash Amount (Rs.)
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
-                  <input
-                    type="number"
-                    value={openingCash}
-                    onChange={(e) => setOpeningCash(e.target.value)}
-                    placeholder="0"
-                    className="w-full h-12 pl-9 pr-4 bg-pos-card border border-pos-border rounded-xl text-lg font-mono text-white placeholder-gray-700 outline-none focus:border-teal-500/50"
-                    autoFocus
-                  />
-                </div>
-              </div>
+        <motion.button whileTap={{ scale: 0.98 }} type="submit" disabled={!confirmed || isOpening} className={`${btnPrimary} w-full h-12`}>
+          {isOpening ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" /> Starting shift…
+            </>
+          ) : (
+            "Start Shift"
+          )}
+        </motion.button>
 
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(e) => setConfirmed(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 accent-teal-500"
-                />
-                <span className="text-gray-400 text-sm leading-relaxed">
-                  I have counted and verified the opening cash of{" "}
-                  <span className="text-teal-400 font-mono">
-                    Rs.{parseFloat(openingCash) || 0}
-                  </span>
-                </span>
-              </label>
-
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={handleOpen}
-                disabled={!confirmed || isOpening}
-                className={`
-                  w-full h-12 rounded-xl font-grotesk font-bold text-white flex items-center justify-center gap-2 transition-all
-                  ${confirmed && !isOpening
-                    ? "bg-gradient-to-r from-teal-500 to-teal-600 shadow-lg shadow-teal-500/30 hover:from-teal-400"
-                    : "bg-pos-card border border-pos-border opacity-50 cursor-not-allowed"
-                  }
-                `}
-              >
-                {isOpening ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" /> Opening Shift…</>
-                ) : (
-                  "Open Shift"
-                )}
-              </motion.button>
-
-              <button
-                onClick={onClose}
-                className="w-full text-gray-600 text-sm hover:text-gray-400 transition-colors py-1"
-              >
-                Skip (work without shift tracking)
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        <button type="button" onClick={onClose} className="w-full text-gray-500 text-xs hover:text-gray-300 transition-colors">
+          Skip for now — sell without shift tracking
+        </button>
+      </form>
+    </Modal>
   )
 }

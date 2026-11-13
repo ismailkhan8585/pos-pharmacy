@@ -1,37 +1,50 @@
 "use client"
 
-import { usePOSProductsStore } from "@/stores/pos-products"
-import { AlertTriangle, Package } from "lucide-react"
+import { useMemo } from "react"
 import Link from "next/link"
+import { AlertTriangle, ArrowRight } from "lucide-react"
+import { usePOSProductsStore } from "@/stores/pos-products"
 
 export default function LowStockBanner() {
-  const { getLowStockProducts, getOutOfStockProducts } = usePOSProductsStore()
+  const products = usePOSProductsStore((s) => s.products)
 
-  const lowItems = getLowStockProducts()
-  const outItems = getOutOfStockProducts()
+  const { low, out } = useMemo(() => {
+    let low = 0
+    let out = 0
+    for (const p of products) {
+      if (p.stock <= 0) out++
+      else if (p.stock <= p.lowStockAt) low++
+    }
+    return { low, out }
+  }, [products])
 
-  if (lowItems.length === 0 && outItems.length === 0) return null
+  if (low === 0 && out === 0) return null
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex-shrink-0">
-      <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        {lowItems.length > 0 && (
-          <span className="text-amber-400 text-xs">
-            {lowItems.length} low stock
-          </span>
-        )}
-        {outItems.length > 0 && (
-          <span className="text-red-400 text-xs">
-            {outItems.length} out of stock
-          </span>
-        )}
-      </div>
+    <div className="px-4 pb-3 shrink-0">
       <Link
         href="/inventory/products?filter=low"
-        className="text-amber-400 text-[10px] hover:text-amber-300 transition-colors flex-shrink-0"
+        className="group flex items-center gap-3 h-9 px-3 rounded-xl border border-amber-500/20 bg-linear-to-r from-amber-500/10 to-transparent hover:border-amber-500/40 transition-colors"
       >
-        View →
+        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+        <span className="text-xs text-gray-300 flex items-center gap-3 flex-1 min-w-0">
+          <span className="font-medium text-amber-300">Stock attention</span>
+          {low > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              {low} running low
+            </span>
+          )}
+          {out > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+              {out} out of stock
+            </span>
+          )}
+        </span>
+        <span className="flex items-center gap-1 text-[11px] text-amber-300/80 group-hover:text-amber-200 shrink-0">
+          Review <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+        </span>
       </Link>
     </div>
   )

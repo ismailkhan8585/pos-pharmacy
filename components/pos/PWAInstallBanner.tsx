@@ -49,7 +49,7 @@ export default function PWAInstallBanner() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:w-96 z-50 bg-[#1C1C22] border border-[#2E2E3A] rounded-2xl p-4 shadow-2xl shadow-teal-500/10 flex items-center gap-4 animate-pop-in">
-      <div className="w-12 h-12 bg-teal-500/20 text-teal-400 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+      <div className="w-12 h-12 bg-teal-500/20 text-teal-400 rounded-xl flex items-center justify-center text-2xl shrink-0">
         🏥
       </div>
       <div className="flex-1 min-w-0">
@@ -60,7 +60,7 @@ export default function PWAInstallBanner() {
           Works 100% offline, full screen, fast counter launch
         </p>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={handleDismiss}
           className="text-gray-500 hover:text-gray-300 text-xs px-2 py-1 font-medium transition-colors"

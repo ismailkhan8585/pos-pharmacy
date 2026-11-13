@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Save, CheckSquare } from "lucide-react"
 import toast from "react-hot-toast"
+import { PageHeader } from "@/components/ui"
+import { ClipboardList as HeaderIcon } from "lucide-react"
 
 export default function StockCountPage() {
   const [products, setProducts] = useState<any[]>([])
@@ -66,12 +68,9 @@ export default function StockCountPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 lg:p-8 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-grotesk font-bold text-2xl text-white">Physical Stock Count</h1>
-          <p className="text-gray-500 text-sm">Enter actual counts to sync system stock</p>
-        </div>
+        <PageHeader icon={HeaderIcon} title="Physical Stock Count" subtitle="Enter actual counts to sync system stock" />
         {changedItems.length > 0 && (
           <button
             onClick={handleApplyAll}

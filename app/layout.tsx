@@ -40,9 +40,9 @@ export default function RootLayout({
           toastOptions={{
             duration: 2000,
             style: {
-              background: "rgb(20 20 24)",
+              background: "rgb(19 22 29)",
               color: "rgb(250 250 250)",
-              border: "1px solid rgb(35 35 42)",
+              border: "1px solid rgb(32 36 46)",
               borderRadius: "12px",
               fontSize: "14px",
               fontFamily: "'DM Sans', sans-serif",

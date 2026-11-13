@@ -5,6 +5,8 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { Plus, Phone, MessageCircle, Edit, Trash2 } from "lucide-react"
 import toast from "react-hot-toast"
+import { PageHeader } from "@/components/ui"
+import { Truck as HeaderIcon } from "lucide-react"
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<any[]>([])
@@ -25,12 +27,9 @@ export default function SuppliersPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 lg:p-8 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-grotesk font-bold text-2xl text-white">Suppliers</h1>
-          <p className="text-gray-500 text-sm">{suppliers.length} suppliers</p>
-        </div>
+        <PageHeader icon={HeaderIcon} title="Suppliers" subtitle={<>{suppliers.length} suppliers</>} />
         <Link
           href="/suppliers/new"
           className="flex items-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 rounded-xl text-white text-sm font-medium transition-colors"
@@ -47,7 +46,7 @@ export default function SuppliersPage() {
         ) : (
           suppliers.map((s) => (
             <div key={s.id} className="bg-pos-card border border-pos-border rounded-xl p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400 text-lg font-bold flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400 text-lg font-bold shrink-0">
                 {s.name[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">

@@ -5,6 +5,8 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { formatDateTime, formatMoney } from "@/lib/pos-helpers"
 import { Plus } from "lucide-react"
+import { PageHeader } from "@/components/ui"
+import { ShoppingCart as HeaderIcon } from "lucide-react"
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState<any[]>([])
@@ -22,12 +24,9 @@ export default function PurchasesPage() {
   }, [])
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 lg:p-8 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-grotesk font-bold text-2xl text-white">Purchase History</h1>
-          <p className="text-gray-500 text-sm">{purchases.length} purchases</p>
-        </div>
+        <PageHeader icon={HeaderIcon} title="Purchase History" subtitle={<>{purchases.length} purchases</>} />
         <Link
           href="/inventory/receive"
           className="flex items-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 rounded-xl text-white text-sm font-medium transition-colors"

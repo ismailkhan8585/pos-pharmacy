@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase"
 import { formatDate, getDaysUntilExpiry } from "@/lib/pos-helpers"
 import { AlertTriangle } from "lucide-react"
 import toast from "react-hot-toast"
+import { PageHeader } from "@/components/ui"
+import { CalendarClock as HeaderIcon } from "lucide-react"
 
 export default function ExpiryPage() {
   const [batches, setBatches] = useState<any[]>([])
@@ -58,11 +60,8 @@ export default function ExpiryPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="font-grotesk font-bold text-2xl text-white">Expiry Management</h1>
-        <p className="text-gray-500 text-sm">Track and manage product expiry dates</p>
-      </div>
+    <div className="p-6 lg:p-8 space-y-6">
+      <PageHeader icon={HeaderIcon} title="Expiry Management" subtitle="Track and manage product expiry dates" />
 
       {/* Tabs */}
       <div className="flex gap-2">

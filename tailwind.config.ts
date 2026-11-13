@@ -17,14 +17,14 @@ const config: Record<string, any> = {
     extend: {
       colors: {
         pos: {
-          bg: "rgb(9 9 11)",
-          panel: "rgb(13 13 15)",
-          bill: "rgb(11 11 13)",
-          card: "rgb(20 20 24)",
-          cardHover: "rgb(28 28 33)",
-          modal: "rgb(18 18 22)",
-          border: "rgb(35 35 42)",
-          borderHi: "rgb(55 55 65)",
+          bg: "rgb(8 10 14)",
+          panel: "rgb(11 13 18)",
+          bill: "rgb(13 16 22)",
+          card: "rgb(19 22 29)",
+          cardHover: "rgb(25 29 38)",
+          modal: "rgb(16 19 26)",
+          border: "rgb(32 36 46)",
+          borderHi: "rgb(50 56 70)",
         },
         teal: {
           50: "rgb(236 253 248)",

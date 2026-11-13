@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Save, Search } from "lucide-react"
 import toast from "react-hot-toast"
+import { PageHeader } from "@/components/ui"
+import { SlidersHorizontal as HeaderIcon } from "lucide-react"
 
 export default function AdjustStockPage() {
   const [products, setProducts] = useState<any[]>([])
@@ -60,11 +62,8 @@ export default function AdjustStockPage() {
   }
 
   return (
-    <div className="p-6 max-w-xl space-y-6">
-      <div>
-        <h1 className="font-grotesk font-bold text-2xl text-white">Adjust Stock</h1>
-        <p className="text-gray-500 text-sm">Correct stock count with reason</p>
-      </div>
+    <div className="p-6 lg:p-8 max-w-xl space-y-6">
+      <PageHeader icon={HeaderIcon} title="Adjust Stock" subtitle="Correct stock count with reason" />
 
       {/* Product Search */}
       <div className="bg-pos-card border border-pos-border rounded-xl p-5 space-y-3">

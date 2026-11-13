@@ -1,11 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
+import Link from "next/link"
 import { supabase, closeShift } from "@/lib/supabase"
 import { usePOSShiftStore } from "@/stores/pos-shift"
 import { formatDateTime, formatShiftDuration } from "@/lib/pos-helpers"
-import { Clock, CheckCircle, XCircle } from "lucide-react"
+import { Clock, Power, Banknote, Smartphone, BadgePercent, ReceiptText, Wallet, CircleDot, Loader2, History, MonitorPlay } from "lucide-react"
+import { PageHeader, StatCard, Modal, Field, EmptyState, btnPrimary, btnSecondary } from "@/components/ui"
 import toast from "react-hot-toast"
+
+const fmt = (n: number) => Math.round(n || 0).toLocaleString("en-PK")
 
 export default function ShiftsPage() {
   const [shifts, setShifts] = useState<any[]>([])
@@ -13,33 +17,31 @@ export default function ShiftsPage() {
   const [showCloseModal, setShowCloseModal] = useState(false)
   const [closingCash, setClosingCash] = useState("")
   const [isClosing, setIsClosing] = useState(false)
-  const { currentShift, closeShift: closeShiftState } = usePOSShiftStore()
+  const currentShift = usePOSShiftStore((s) => s.currentShift)
+  const closeShiftState = usePOSShiftStore((s) => s.closeShift)
 
-  useEffect(() => {
-    const loadShifts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("shifts")
-          .select("*")
-          .order("opened_at", { ascending: false })
-        if (!error && data) {
-          setShifts(data)
-        }
-      } catch (err) {
-        console.warn("Could not load shifts from cloud:", err)
-      } finally {
-        setIsLoading(false)
-      }
+  const loadShifts = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from("shifts").select("*").order("opened_at", { ascending: false }).limit(100)
+      if (!error && data) setShifts(data)
+    } catch (err) {
+      console.warn("Could not load shifts from cloud:", err)
+    } finally {
+      setIsLoading(false)
     }
-    loadShifts()
   }, [])
 
-  const handleCloseShift = async () => {
-    if (!currentShift.id) return
-    const cash = parseFloat(closingCash) || 0
-    const expectedCash = currentShift.openingCash + (currentShift.cashSales || 0)
-    const difference = cash - expectedCash
+  useEffect(() => {
+    loadShifts()
+  }, [loadShifts])
 
+  const isOpen = currentShift.status === "OPEN"
+  const expectedCash = currentShift.openingCash + (currentShift.cashSales || 0)
+  const counted = closingCash === "" ? null : parseFloat(closingCash) || 0
+  const cashDiff = counted === null ? 0 : counted - expectedCash
+
+  const handleCloseShift = async () => {
+    if (!currentShift.id || counted === null) return
     setIsClosing(true)
     const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true
     const isCloudShift = isOnline && !currentShift.id.startsWith("shift-off-")
@@ -47,205 +49,261 @@ export default function ShiftsPage() {
     if (isCloudShift) {
       try {
         await closeShift(currentShift.id, {
-          closingCash: cash,
+          closingCash: counted,
           expectedCash,
-          cashDifference: difference,
+          cashDifference: cashDiff,
           totalSales: currentShift.totalSales,
           totalBills: currentShift.totalBills,
           totalDiscount: currentShift.totalDiscount,
         })
         closeShiftState()
-        toast.success("Shift closed successfully")
+        toast.success("Shift closed")
         setShowCloseModal(false)
-
-        // Refresh cloud shifts
-        try {
-          const { data } = await supabase
-            .from("shifts")
-            .select("*")
-            .order("opened_at", { ascending: false })
-          if (data) setShifts(data)
-        } catch {}
-        return
-      } catch (err: any) {
-        console.warn("Failed to close shift on cloud, closing locally:", err)
-      } finally {
+        setClosingCash("")
         setIsClosing(false)
+        loadShifts()
+        return
+      } catch (err) {
+        console.warn("Failed to close shift on cloud, closing locally:", err)
       }
     }
 
-    // Offline shift close
-    try {
-      closeShiftState()
-      toast.success("⚡ Shift closed in offline mode", { icon: "🟡" })
-      setShowCloseModal(false)
-    } catch (offlineErr: any) {
-      toast.error("Failed to close shift: " + offlineErr?.message)
-    } finally {
-      setIsClosing(false)
-    }
+    closeShiftState()
+    toast.success("Shift closed on this device (offline)")
+    setShowCloseModal(false)
+    setClosingCash("")
+    setIsClosing(false)
   }
 
-  const expectedCash = currentShift.openingCash + (currentShift.cashSales || 0)
-  const cashDiff = parseFloat(closingCash) - expectedCash
-
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="font-grotesk font-bold text-2xl text-white">Shifts</h1>
-        <p className="text-gray-500 text-sm">Track daily shift performance</p>
-      </div>
+    <div className="p-6 lg:p-8 space-y-6">
+      <PageHeader icon={Clock} title="Shifts" subtitle="Cash drawer and shift performance" />
 
-      {/* Current Shift Card */}
-      {currentShift.status === "OPEN" && (
-        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-5">
-          <div className="flex items-center justify-between">
+      {/* Current shift */}
+      {isOpen ? (
+        <div className="relative overflow-hidden rounded-3xl border border-teal-500/25 bg-linear-to-br from-teal-500/10 via-pos-card to-pos-card p-6">
+          <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
+          <div className="relative flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="w-4 h-4 text-teal-400" />
-                <span className="text-teal-400 font-medium">Shift Active</span>
-                <span className="font-mono text-gray-500 text-sm">{currentShift.shiftNumber}</span>
-              </div>
-              <p className="text-gray-500 text-sm">Started: {currentShift.openedAt ? formatDateTime(currentShift.openedAt) : "—"}</p>
+              <span className="inline-flex items-center gap-2 text-xs font-semibold text-teal-300 bg-teal-500/10 border border-teal-500/30 rounded-full px-3 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+                Shift in progress
+              </span>
+              <h2 className="font-grotesk text-xl font-bold text-white mt-3">{currentShift.operatorName}</h2>
+              <p className="text-sm text-gray-400 mt-0.5">
+                <span className="font-mono">{currentShift.shiftNumber}</span> · started{" "}
+                {currentShift.openedAt ? formatDateTime(currentShift.openedAt) : "—"}
+                {currentShift.openedAt && <> · {formatShiftDuration(currentShift.openedAt)} ago</>}
+              </p>
             </div>
             <div className="text-right">
-              <p className="font-mono text-2xl font-bold text-white">Rs.{Math.round(currentShift.totalSales).toLocaleString()}</p>
-              <p className="text-gray-500 text-sm">{currentShift.totalBills} bills</p>
+              <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 font-semibold">Sales this shift</p>
+              <p className="font-mono text-4xl font-bold text-white tabular">Rs {fmt(currentShift.totalSales)}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-teal-500/20">
-            <div>
-              <p className="text-gray-500 text-xs">Opening Cash</p>
-              <p className="font-mono text-white font-bold">Rs.{currentShift.openingCash}</p>
-            </div>
-            <div>
-              <p className="text-gray-500 text-xs">Cash Sales</p>
-              <p className="font-mono text-teal-400 font-bold">Rs.{Math.round(currentShift.cashSales || 0)}</p>
-            </div>
-            <div>
-              <p className="text-gray-500 text-xs">Discount Given</p>
-              <p className="font-mono text-amber-400 font-bold">Rs.{Math.round(currentShift.totalDiscount)}</p>
-            </div>
+          <div className="relative grid grid-cols-2 lg:grid-cols-5 gap-3 mt-6">
+            <StatCard label="Bills" value={fmt(currentShift.totalBills)} icon={ReceiptText} tone="sky" />
+            <StatCard label="Opening cash" value={`Rs ${fmt(currentShift.openingCash)}`} icon={Wallet} tone="gray" />
+            <StatCard label="Cash sales" value={`Rs ${fmt(currentShift.cashSales)}`} icon={Banknote} tone="teal" />
+            <StatCard label="Digital sales" value={`Rs ${fmt(currentShift.digitalSales)}`} icon={Smartphone} tone="purple" />
+            <StatCard label="Discounts" value={`Rs ${fmt(currentShift.totalDiscount)}`} icon={BadgePercent} tone="amber" />
           </div>
 
-          <button
-            onClick={() => setShowCloseModal(true)}
-            className="mt-4 w-full h-10 bg-orange-500/10 text-orange-400 border border-orange-500/30 rounded-xl text-sm font-medium hover:bg-orange-500/20 transition-all"
-          >
-            End Shift
-          </button>
+          <div className="relative flex flex-wrap items-center justify-between gap-3 mt-6 pt-5 border-t border-white/5">
+            <p className="text-sm text-gray-400">
+              Expected in drawer: <span className="font-mono font-semibold text-white">Rs {fmt(expectedCash)}</span>
+            </p>
+            <div className="flex gap-2">
+              <Link href="/pos" className={btnSecondary}>
+                <MonitorPlay className="w-4 h-4" /> Back to POS
+              </Link>
+              <button
+                onClick={() => setShowCloseModal(true)}
+                className="inline-flex items-center gap-2 h-11 px-5 rounded-xl text-sm font-semibold text-white bg-orange-500 hover:bg-orange-400 shadow-[0_10px_24px_-10px_rgba(249,115,22,0.8)] transition-all"
+              >
+                <Power className="w-4 h-4" /> End shift
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-3xl surface p-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <CircleDot className="w-5 h-5 text-gray-500" />
+            <div>
+              <p className="text-white font-semibold">No shift is open</p>
+              <p className="text-sm text-gray-500">Open the POS counter to start a new shift.</p>
+            </div>
+          </div>
+          <Link href="/pos" className={btnPrimary}>
+            <MonitorPlay className="w-4 h-4" /> Go to POS
+          </Link>
         </div>
       )}
 
-      {/* Close Shift Modal */}
-      {showCloseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md">
-          <div className="glass border border-pos-border rounded-2xl w-full max-w-sm mx-4 p-5 space-y-4">
-            <h3 className="font-grotesk font-bold text-white text-lg">Close Shift</h3>
-
-            <div className="space-y-2 bg-pos-card border border-pos-border rounded-xl p-4 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Opening Cash:</span>
-                <span className="font-mono text-white">Rs.{currentShift.openingCash}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Cash Sales:</span>
-                <span className="font-mono text-teal-400">Rs.{Math.round(currentShift.cashSales || 0)}</span>
-              </div>
-              <div className="flex justify-between font-bold border-t border-pos-border pt-2">
-                <span className="text-gray-400">Expected in Drawer:</span>
-                <span className="font-mono text-white">Rs.{Math.round(expectedCash)}</span>
-              </div>
+      {/* Close shift */}
+      <Modal
+        isOpen={showCloseModal}
+        onClose={() => !isClosing && setShowCloseModal(false)}
+        icon={Power}
+        tone="amber"
+        title="End shift"
+        subtitle="Count the cash drawer to close out"
+        size="sm"
+      >
+        <div className="p-6 space-y-5">
+          <div className="rounded-2xl border border-pos-border bg-pos-bg p-4 space-y-2 text-sm">
+            <div className="flex justify-between text-gray-400">
+              <span>Opening cash</span>
+              <span className="font-mono text-gray-200">Rs {fmt(currentShift.openingCash)}</span>
             </div>
+            <div className="flex justify-between text-gray-400">
+              <span>+ Cash sales</span>
+              <span className="font-mono text-gray-200">Rs {fmt(currentShift.cashSales)}</span>
+            </div>
+            <div className="flex justify-between pt-2 border-t border-dashed border-pos-border font-semibold">
+              <span className="text-gray-200">Expected in drawer</span>
+              <span className="font-mono text-white">Rs {fmt(expectedCash)}</span>
+            </div>
+          </div>
 
-            <div>
-              <label className="text-gray-400 text-xs mb-1 block">Actual Cash in Drawer (Rs.)</label>
+          <Field label="Cash counted in drawer">
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-mono">Rs</span>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={closingCash}
-                onChange={(e) => setClosingCash(e.target.value)}
-                placeholder={String(Math.round(expectedCash))}
-                className="w-full h-12 px-4 bg-pos-bg border border-pos-border rounded-xl text-2xl font-mono text-white outline-none focus:border-orange-500/50"
+                onChange={(e) => setClosingCash(e.target.value.replace(/[^0-9.]/g, ""))}
+                onKeyDown={(e) => e.key === "Enter" && handleCloseShift()}
+                placeholder={fmt(expectedCash)}
+                className="w-full h-14 pl-12 pr-4 bg-pos-bg border border-pos-border rounded-2xl text-2xl font-mono font-bold text-white placeholder-gray-600 tabular"
                 autoFocus
               />
             </div>
+          </Field>
 
-            {closingCash && (
-              <div className={`flex justify-between items-center rounded-xl px-4 py-3 ${
-                cashDiff >= 0 ? "bg-teal-500/10 border border-teal-500/20" : "bg-red-500/10 border border-red-500/20"
-              }`}>
-                <span className="text-gray-400 text-sm">Difference:</span>
-                <span className={`font-mono font-bold text-lg ${cashDiff >= 0 ? "text-teal-400" : "text-red-400"}`}>
-                  {cashDiff >= 0 ? "+" : ""}Rs.{Math.round(cashDiff)}
-                </span>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <button onClick={() => setShowCloseModal(false)} className="flex-1 h-10 bg-pos-card border border-pos-border rounded-xl text-gray-400 text-sm hover:text-white transition-all">
-                Cancel
-              </button>
-              <button
-                onClick={handleCloseShift}
-                disabled={isClosing}
-                className="flex-1 h-10 bg-orange-500/10 text-orange-400 border border-orange-500/30 rounded-xl text-sm font-medium hover:bg-orange-500/20 transition-all disabled:opacity-50"
+          {counted !== null && (
+            <div
+              className={`flex justify-between items-center rounded-2xl px-4 h-14 border ${
+                Math.round(cashDiff) === 0
+                  ? "bg-teal-500/10 border-teal-500/25"
+                  : cashDiff > 0
+                  ? "bg-sky-500/10 border-sky-500/25"
+                  : "bg-red-500/10 border-red-500/25"
+              }`}
+            >
+              <span className="text-sm text-gray-300">
+                {Math.round(cashDiff) === 0 ? "Drawer balanced" : cashDiff > 0 ? "Over by" : "Short by"}
+              </span>
+              <span
+                className={`font-mono font-bold text-xl ${
+                  Math.round(cashDiff) === 0 ? "text-teal-300" : cashDiff > 0 ? "text-sky-300" : "text-red-300"
+                }`}
               >
-                {isClosing ? "Closing…" : "Close Shift"}
-              </button>
+                {Math.round(cashDiff) === 0 ? "✓" : `Rs ${fmt(Math.abs(cashDiff))}`}
+              </span>
             </div>
+          )}
+
+          <div className="flex gap-2">
+            <button onClick={() => setShowCloseModal(false)} disabled={isClosing} className={`${btnSecondary} flex-1`}>
+              Cancel
+            </button>
+            <button
+              onClick={handleCloseShift}
+              disabled={isClosing || counted === null}
+              className="flex-1 h-11 inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white bg-orange-500 hover:bg-orange-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isClosing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />}
+              {isClosing ? "Closing…" : "Close shift"}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
 
-      {/* Shifts History */}
-      <div className="bg-pos-card border border-pos-border rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-pos-border">
-          <h3 className="font-grotesk font-semibold text-white text-sm">Shift History</h3>
+      {/* History */}
+      <div className="bg-pos-card border border-pos-border rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-2 px-5 h-14 border-b border-pos-border">
+          <History className="w-4 h-4 text-gray-500" />
+          <h3 className="font-grotesk font-semibold text-white">Shift history</h3>
         </div>
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-pos-border">
-              <th className="text-left px-4 py-3 text-gray-500 text-xs">Shift #</th>
-              <th className="text-left px-4 py-3 text-gray-500 text-xs">Opened</th>
-              <th className="text-left px-4 py-3 text-gray-500 text-xs">Closed</th>
-              <th className="text-right px-4 py-3 text-gray-500 text-xs">Sales</th>
-              <th className="text-center px-4 py-3 text-gray-500 text-xs">Bills</th>
-              <th className="text-right px-4 py-3 text-gray-500 text-xs">Cash Diff</th>
-              <th className="text-center px-4 py-3 text-gray-500 text-xs">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={7} className="text-center py-8 text-gray-600">Loading…</td></tr>
-            ) : shifts.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-8 text-gray-600">No shifts yet</td></tr>
-            ) : (
-              shifts.map((s) => (
-                <tr key={s.id} className="border-b border-pos-border/50 hover:bg-pos-cardHover/50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-teal-400 text-sm">{s.shift_number}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{formatDateTime(s.opened_at)}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{s.closed_at ? formatDateTime(s.closed_at) : "—"}</td>
-                  <td className="px-4 py-3 text-right font-mono text-white text-sm">Rs.{Math.round(s.total_sales || 0)}</td>
-                  <td className="px-4 py-3 text-center text-gray-400 text-sm">{s.total_bills || 0}</td>
-                  <td className="px-4 py-3 text-right">
-                    {s.cash_difference != null ? (
-                      <span className={`font-mono text-sm ${s.cash_difference >= 0 ? "text-teal-400" : "text-red-400"}`}>
-                        {s.cash_difference >= 0 ? "+" : ""}Rs.{Math.round(s.cash_difference)}
-                      </span>
-                    ) : <span className="text-gray-600">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`flex items-center justify-center gap-1 text-xs ${s.status === "OPEN" ? "text-teal-400" : "text-gray-500"}`}>
-                      {s.status === "OPEN" ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                      {s.status}
-                    </span>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="text-left px-5 py-3">Shift</th>
+                <th className="text-left px-4 py-3">Opened</th>
+                <th className="text-left px-4 py-3">Closed</th>
+                <th className="text-right px-4 py-3">Sales</th>
+                <th className="text-right px-4 py-3">Bills</th>
+                <th className="text-right px-4 py-3">Drawer</th>
+                <th className="text-right px-5 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-t border-pos-border/60">
+                    <td colSpan={7} className="px-5 py-3">
+                      <div className="h-6 rounded-lg bg-white/3 animate-pulse" />
+                    </td>
+                  </tr>
+                ))
+              ) : shifts.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <EmptyState icon={History} title="No shifts recorded yet" description="Closed shifts will appear here with their cash count." />
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                shifts.map((s) => {
+                  const diff = s.cash_difference
+                  return (
+                    <tr key={s.id} className="border-t border-pos-border/60">
+                      <td className="px-5 py-3">
+                        <p className="font-mono text-sm text-white">{s.shift_number}</p>
+                        <p className="text-xs text-gray-500">{s.operator_name}</p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{formatDateTime(s.opened_at)}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{s.closed_at ? formatDateTime(s.closed_at) : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white text-sm tabular">Rs {fmt(s.total_sales)}</td>
+                      <td className="px-4 py-3 text-right text-gray-300 text-sm">{s.total_bills || 0}</td>
+                      <td className="px-4 py-3 text-right">
+                        {diff != null ? (
+                          <span
+                            className={`font-mono text-xs px-2 py-1 rounded-lg border ${
+                              Math.round(diff) === 0
+                                ? "text-teal-300 bg-teal-500/10 border-teal-500/20"
+                                : diff > 0
+                                ? "text-sky-300 bg-sky-500/10 border-sky-500/20"
+                                : "text-red-300 bg-red-500/10 border-red-500/25"
+                            }`}
+                          >
+                            {Math.round(diff) === 0 ? "Balanced" : `${diff > 0 ? "+" : "−"}Rs ${fmt(Math.abs(diff))}`}
+                          </span>
+                        ) : (
+                          <span className="text-gray-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-1 ${
+                            s.status === "OPEN" ? "text-teal-300 bg-teal-500/10" : "text-gray-400 bg-white/5"
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${s.status === "OPEN" ? "bg-teal-400" : "bg-gray-500"}`} />
+                          {s.status === "OPEN" ? "Open" : "Closed"}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

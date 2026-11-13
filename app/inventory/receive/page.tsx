@@ -5,6 +5,8 @@ import { supabase, receiveStock } from "@/lib/supabase"
 import { Plus, Minus, Save, ArrowLeft, Search } from "lucide-react"
 import Link from "next/link"
 import toast from "react-hot-toast"
+import { PageHeader } from "@/components/ui"
+import { PackageCheck as HeaderIcon } from "lucide-react"
 
 interface StockItem {
   productId: string
@@ -111,15 +113,12 @@ export default function ReceiveStockPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl space-y-6">
+    <div className="p-6 lg:p-8 max-w-4xl space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/inventory/products" className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-pos-card transition-all">
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div>
-          <h1 className="font-grotesk font-bold text-2xl text-white">Receive Stock</h1>
-          <p className="text-gray-500 text-sm">Add new stock from supplier</p>
-        </div>
+        <PageHeader icon={HeaderIcon} title="Receive Stock" subtitle="Add new stock from supplier" />
       </div>
 
       {/* Supplier Selection */}

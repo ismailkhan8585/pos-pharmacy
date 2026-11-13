@@ -1,19 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
 
 @import "tailwindcss";
 @config "../tailwind.config.ts";
 
 @theme {
-  --color-pos-bg: rgb(9 9 11);
-  --color-pos-panel: rgb(13 13 15);
-  --color-pos-bill: rgb(11 11 13);
-  --color-pos-card: rgb(20 20 24);
-  --color-pos-cardHover: rgb(28 28 33);
-  --color-pos-card-hover: rgb(28 28 33);
-  --color-pos-modal: rgb(18 18 22);
-  --color-pos-border: rgb(35 35 42);
-  --color-pos-borderHi: rgb(55 55 65);
-  --color-pos-border-hi: rgb(55 55 65);
+  --color-pos-bg: rgb(8 10 14);
+  --color-pos-panel: rgb(11 13 18);
+  --color-pos-bill: rgb(13 16 22);
+  --color-pos-card: rgb(19 22 29);
+  --color-pos-cardHover: rgb(25 29 38);
+  --color-pos-card-hover: rgb(25 29 38);
+  --color-pos-modal: rgb(16 19 26);
+  --color-pos-border: rgb(32 36 46);
+  --color-pos-borderHi: rgb(50 56 70);
+  --color-pos-border-hi: rgb(50 56 70);
 
   --font-grotesk: "Space Grotesk", sans-serif;
   --font-sans: "DM Sans", sans-serif;
@@ -22,11 +22,11 @@
 }
 
 :root {
-  --pos-bg:      rgb(9 9 11);
-  --pos-panel:   rgb(13 13 15);
-  --pos-bill:    rgb(11 11 13);
-  --pos-card:    rgb(20 20 24);
-  --pos-border:  rgb(35 35 42);
+  --pos-bg:      rgb(8 10 14);
+  --pos-panel:   rgb(11 13 18);
+  --pos-bill:    rgb(13 16 22);
+  --pos-card:    rgb(19 22 29);
+  --pos-border:  rgb(32 36 46);
   --teal-500:    rgb(16 185 129);
 }
 
@@ -46,18 +46,18 @@ html, body {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(55 55 65);
-  border-radius: 2px;
+  background: rgb(40 45 57);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(75 75 90);
+  background: rgb(60 67 84);
 }
 
 /* POS Touch targets */
@@ -78,9 +78,36 @@ html, body {
 
 /* Glassmorphism */
 .glass {
-  background: rgba(18, 18, 26, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(16, 19, 26, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 30px 80px -20px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.04) inset;
+}
+
+/* Elevated surface */
+.surface {
+  background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0) 40%), rgb(19 22 29);
+  border: 1px solid rgb(32 36 46);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px -12px rgba(0,0,0,0.6);
+}
+
+/* Keyboard hint chip */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 5px;
+  border: 1px solid rgb(50 56 70);
+  border-bottom-width: 2px;
+  background: rgb(19 22 29);
+  color: rgb(140 148 165);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
 }
 
 /* Press animation */
@@ -95,6 +122,7 @@ html, body {
 .font-num {
   font-family: 'JetBrains Mono', monospace;
 }
+.tabular { font-variant-numeric: tabular-nums; }
 
 /* Urdu font */
 .font-urdu {
@@ -105,6 +133,11 @@ html, body {
 /* No scrollbar */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Remove number input spinners */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* POS Layout */
 .pos-layout {
@@ -118,30 +151,36 @@ html, body {
 .pos-content {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
 .pos-left {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--pos-panel);
+  background:
+    radial-gradient(1200px 420px at 0% 0%, rgba(16,185,129,0.06), transparent 60%),
+    var(--pos-panel);
 }
 
 .pos-right {
-  width: 380px;
+  width: 400px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: var(--pos-bill);
   border-left: 1px solid var(--pos-border);
+  box-shadow: -20px 0 40px -30px rgba(0,0,0,0.8);
 }
 
+@media (max-width: 1100px) {
+  .pos-right { width: 360px; }
+}
 @media (max-width: 768px) {
-  .pos-right {
-    width: 320px;
-  }
+  .pos-right { width: 320px; }
 }
 
 /* Receipt styling */
@@ -158,10 +197,9 @@ html, body {
   margin: 0 auto;
 }
 
-/* Input focus ring */
+/* Input focus */
 input:focus, select:focus, textarea:focus {
   outline: none;
-  ring-color: rgb(16 185 129);
 }
 
 /* Animate in */
@@ -181,17 +219,17 @@ input:focus, select:focus, textarea:focus {
 
 /* Product tile flash */
 @keyframes flashTeal {
-  0%   { background: rgba(16,185,129,0.3); }
+  0%   { background: rgba(16,185,129,0.25); }
   100% { background: transparent; }
 }
 
 @keyframes flashRed {
-  0%   { background: rgba(239,68,68,0.3); }
+  0%   { background: rgba(239,68,68,0.25); }
   100% { background: transparent; }
 }
 
-.flash-teal { animation: flashTeal 0.3s ease; }
-.flash-red  { animation: flashRed 0.3s ease; }
+.flash-teal { animation: flashTeal 0.35s ease; }
+.flash-red  { animation: flashRed 0.35s ease; }
 
 /* Pin dot animation */
 @keyframes dotPop {
@@ -209,4 +247,70 @@ input:focus, select:focus, textarea:focus {
 }
 .animate-progress-bar {
   animation: progress-bar 1.8s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Back-office (management pages) — premium base styling.
+   Lives in cascade layers so page-level utility classes always win.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@layer base {
+  .app-main {
+    background:
+      radial-gradient(900px 380px at 100% -10%, rgba(16,185,129,0.06), transparent 60%),
+      radial-gradient(700px 300px at 0% 0%, rgba(56,189,248,0.035), transparent 60%),
+      var(--pos-bg);
+  }
+  .app-page {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  /* Form controls */
+  .app-main input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  .app-main select,
+  .app-main textarea {
+    transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  }
+  .app-main input:not([type=checkbox]):not([type=radio]):focus,
+  .app-main select:focus,
+  .app-main textarea:focus {
+    border-color: rgb(16 185 129 / 0.6);
+    box-shadow: 0 0 0 4px rgb(16 185 129 / 0.1);
+  }
+  .app-main select option { background: rgb(19 22 29); color: white; }
+  .app-main input[type=checkbox], .app-main input[type=radio] { accent-color: rgb(16 185 129); }
+
+  /* Tables */
+  .app-main table { border-collapse: separate; border-spacing: 0; }
+  .app-main thead { background: rgb(255 255 255 / 0.025); }
+  .app-main thead th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgb(120 128 145);
+    white-space: nowrap;
+  }
+  .app-main tbody tr { transition: background-color 120ms ease; }
+  .app-main tbody tr:hover { background: rgb(255 255 255 / 0.025); }
+
+  /* Headings */
+  .app-main h1 { letter-spacing: -0.02em; }
+}
+
+@layer components {
+  /* Cards get depth */
+  .app-main .bg-pos-card.border,
+  .app-main .bg-pos-panel.border {
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.022), rgba(255,255,255,0) 45%);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 10px 30px -18px rgba(0,0,0,0.7);
+  }
+  /* Primary buttons */
+  .app-main button.bg-teal-500,
+  .app-main a.bg-teal-500 {
+    background-image: linear-gradient(90deg, rgb(16 185 129), rgb(13 148 136));
+    box-shadow: 0 10px 24px -12px rgba(16,185,129,0.8);
+  }
+  .app-main button.bg-teal-500:hover:not(:disabled),
+  .app-main a.bg-teal-500:hover { filter: brightness(1.08); }
 }

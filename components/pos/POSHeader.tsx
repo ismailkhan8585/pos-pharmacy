@@ -2,45 +2,40 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
+import Link from "next/link"
 import {
   Package2,
   BarChart3,
   Settings,
   LogOut,
   Clock,
-  Wifi,
-  WifiOff,
   AlertTriangle,
+  UserRound,
+  Power,
 } from "lucide-react"
-import { usePOSCartStore } from "@/stores/pos-cart"
 import { usePOSShiftStore } from "@/stores/pos-shift"
+import { usePOSSettingsStore } from "@/stores/pos-settings"
 import { formatShiftDuration } from "@/lib/pos-helpers"
 import { clearSession } from "@/lib/auth"
-import Link from "next/link"
 import ConnectionStatus from "./ConnectionStatus"
+
+const NAV = [
+  { href: "/inventory/products", label: "Stock", icon: Package2 },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/settings", label: "Settings", icon: Settings },
+]
 
 export default function POSHeader() {
   const router = useRouter()
-  const [currentTime, setCurrentTime] = useState("")
-  const getBillNumber = usePOSCartStore((s) => s.getBillNumber)
-  const { currentShift } = usePOSShiftStore()
+  const storeName = usePOSSettingsStore((s) => s.storeName)
+  const currentShift = usePOSShiftStore((s) => s.currentShift)
+  const [now, setNow] = useState<Date | null>(null)
   const [shiftDuration, setShiftDuration] = useState("")
 
-  // Clock
+  // Clock (updates every 15s — minute precision is enough)
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setCurrentTime(
-        now.toLocaleTimeString("en-PK", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        })
-      )
-    }
-    updateTime()
-    const interval = setInterval(updateTime, 1000)
+    setNow(new Date())
+    const interval = setInterval(() => setNow(new Date()), 15000)
     return () => clearInterval(interval)
   }, [])
 
@@ -60,100 +55,109 @@ export default function POSHeader() {
     }
   }
 
-  const isLongShift =
-    currentShift.openedAt
-      ? Date.now() - new Date(currentShift.openedAt).getTime() > 8 * 60 * 60 * 1000
-      : false
+  const isShiftOpen = currentShift.status === "OPEN"
+  const isLongShift = currentShift.openedAt
+    ? Date.now() - new Date(currentShift.openedAt).getTime() > 8 * 60 * 60 * 1000
+    : false
 
   return (
-    <header className="flex items-center justify-between px-4 h-16 border-b border-pos-border bg-pos-panel flex-shrink-0 z-20">
-      {/* Left: Logo + Bill Number */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, rgb(16 185 129), rgb(5 150 105))" }}
-          >
-            ✚
-          </div>
-          <span className="font-grotesk font-bold text-white text-sm hidden sm:block">
-            AN MedCare POS
+    <header className="relative flex items-center justify-between gap-4 px-4 h-14 border-b border-pos-border bg-pos-bg/95 backdrop-blur shrink-0 z-20">
+      {/* Left: Brand */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-base font-bold text-white shrink-0 shadow-lg shadow-teal-500/20 ring-1 ring-white/10"
+          style={{ background: "linear-gradient(135deg, rgb(16 185 129), rgb(4 120 87))" }}
+        >
+          ✚
+        </div>
+        <div className="hidden sm:flex flex-col leading-tight min-w-0">
+          <span className="font-grotesk font-bold text-white text-[15px] truncate">
+            {storeName || "AN MedCare"}
+          </span>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500 font-medium">
+            Point of Sale
           </span>
         </div>
-
-        <div className="h-5 w-px bg-pos-border" />
-
-        <span className="font-mono text-xs text-gray-500 bg-pos-card px-2 py-1 rounded-lg border border-pos-border">
-          {getBillNumber()}
-        </span>
       </div>
 
-      {/* Center: Status */}
-      <div className="flex items-center gap-3">
+      {/* Center: Status cluster */}
+      <div className="hidden md:flex items-center gap-2">
         <ConnectionStatus />
 
-        {/* Clock */}
-        <div className="flex items-center gap-1.5 text-gray-400 text-xs">
-          <Clock className="w-3.5 h-3.5" />
-          <span className="font-mono">{currentTime}</span>
+        <div className="flex items-center gap-2 h-7 px-3 rounded-full border border-pos-border bg-pos-card text-[11px] text-gray-400">
+          <Clock className="w-3.5 h-3.5 text-gray-500" />
+          {now && (
+            <>
+              <span className="text-gray-500 hidden lg:inline">
+                {now.toLocaleDateString("en-PK", { weekday: "short", day: "2-digit", month: "short" })}
+              </span>
+              <span className="w-px h-3 bg-pos-border hidden lg:inline-block" />
+              <span className="font-mono text-gray-200 tabular">
+                {now.toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true })}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Right: Navigation */}
-      <div className="flex items-center gap-1">
-        <Link
-          href="/inventory/products"
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-gray-500 hover:text-white hover:bg-pos-card transition-all duration-150 text-xs"
-        >
-          <Package2 className="w-4 h-4" />
-          <span className="hidden md:block">Stock</span>
-        </Link>
-
-        <Link
-          href="/reports"
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-gray-500 hover:text-white hover:bg-pos-card transition-all duration-150 text-xs"
-        >
-          <BarChart3 className="w-4 h-4" />
-          <span className="hidden md:block">Reports</span>
-        </Link>
-
-        <Link
-          href="/settings"
-          className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-pos-card transition-all duration-150"
-        >
-          <Settings className="w-4 h-4" />
-        </Link>
-
-        {/* Shift Badge */}
-        {currentShift.status === "OPEN" && (
+      {/* Right: Shift + Navigation */}
+      <div className="flex items-center gap-2">
+        {isShiftOpen && (
           <Link
             href="/shifts"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 ${
+            title="Shift details"
+            className={`hidden sm:flex items-center gap-2 h-9 pl-1.5 pr-3 rounded-xl border text-xs transition-all duration-150 ${
               isLongShift
-                ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                : "bg-teal-500/10 text-teal-400 border-teal-500/30"
+                ? "bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/15"
+                : "bg-pos-card text-gray-300 border-pos-border hover:border-pos-borderHi"
             }`}
           >
-            {isLongShift && <AlertTriangle className="w-3 h-3" />}
-            <Clock className="w-3 h-3" />
-            <span>Shift: {shiftDuration || "..."}</span>
+            <span
+              className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                isLongShift ? "bg-amber-500/20" : "bg-teal-500/15 text-teal-400"
+              }`}
+            >
+              {isLongShift ? <AlertTriangle className="w-3.5 h-3.5" /> : <UserRound className="w-3.5 h-3.5" />}
+            </span>
+            <span className="flex flex-col leading-tight text-left">
+              <span className="font-medium text-[11px] text-white truncate max-w-27.5">
+                {currentShift.operatorName}
+              </span>
+              <span className="text-[10px] text-gray-500 font-mono">
+                Shift · {shiftDuration || "…"}
+              </span>
+            </span>
           </Link>
         )}
 
-        {currentShift.status === "OPEN" && (
+        {/* Nav group */}
+        <nav className="flex items-center p-1 rounded-xl border border-pos-border bg-pos-card">
+          {NAV.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              title={label}
+              className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-150 text-xs font-medium"
+            >
+              <Icon className="w-4 h-4" />
+              <span className="hidden xl:block">{label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        {isShiftOpen && (
           <Link
             href="/shifts"
-            className="px-3 py-1.5 rounded-lg text-orange-400 hover:bg-orange-500/10 text-xs font-medium transition-all duration-150 border border-transparent hover:border-orange-500/30"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-orange-300 border border-orange-500/25 bg-orange-500/5 hover:bg-orange-500/15 text-xs font-semibold transition-all duration-150"
           >
-            End Shift
+            <Power className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline">End Shift</span>
           </Link>
         )}
-
-        <div className="h-5 w-px bg-pos-border mx-1" />
 
         <button
           onClick={handleLogout}
-          className="p-2 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150"
+          className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 border border-transparent hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-all duration-150"
           title="Logout"
         >
           <LogOut className="w-4 h-4" />

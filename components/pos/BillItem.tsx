@@ -2,105 +2,108 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Minus, Plus, X, Hash } from "lucide-react"
+import { Minus, Plus, X } from "lucide-react"
 import { CartItem, usePOSCartStore } from "@/stores/pos-cart"
 import NumericKeypad from "./NumericKeypad"
 
 interface Props {
   item: CartItem
+  index?: number
 }
 
-export default function BillItem({ item }: Props) {
-  const { removeItem, updateQty } = usePOSCartStore()
+const fmt = (n: number) => n.toLocaleString("en-PK")
+
+export default function BillItem({ item, index }: Props) {
+  const removeItem = usePOSCartStore((s) => s.removeItem)
+  const updateQty = usePOSCartStore((s) => s.updateQty)
   const [showKeypad, setShowKeypad] = useState(false)
-
-  const handleDecrement = () => {
-    updateQty(item.productId, item.quantity - 1)
-  }
-
-  const handleIncrement = () => {
-    if (item.quantity >= item.maxStock) return
-    updateQty(item.productId, item.quantity + 1)
-  }
-
-  const handleQtyChange = (qty: number) => {
-    updateQty(item.productId, qty)
-    setShowKeypad(false)
-  }
+  const atMax = item.quantity >= item.maxStock
 
   return (
     <>
       <motion.div
         layout
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -20 }}
-        transition={{ duration: 0.15 }}
-        className="flex items-center gap-2 py-2.5 px-3 border-b border-[rgb(26,26,30)] last:border-0 group"
+        initial={{ opacity: 0, x: 16, backgroundColor: "rgba(16,185,129,0.12)" }}
+        animate={{ opacity: 1, x: 0, backgroundColor: "rgba(16,185,129,0)" }}
+        exit={{ opacity: 0, x: -16, height: 0 }}
+        transition={{ duration: 0.2 }}
+        className="group relative mx-2 my-1 px-2.5 py-2.5 rounded-xl hover:bg-white/3 transition-colors"
       >
-        {/* Product name */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1">
-            <p className="text-white text-[13px] truncate leading-tight">{item.nameEn}</p>
-            {item.requiresPrescription && (
-              <span className="text-[9px] bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded px-1 flex-shrink-0">
-                Rx
-              </span>
-            )}
+        <div className="flex items-start gap-2.5">
+          {index !== undefined && (
+            <span className="mt-0.5 w-5 h-5 shrink-0 rounded-md bg-white/5 text-[10px] font-mono text-gray-500 flex items-center justify-center">
+              {index}
+            </span>
+          )}
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="text-white text-[13px] font-medium truncate leading-tight">{item.nameEn}</p>
+              {item.requiresPrescription && (
+                <span className="text-[9px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30 rounded px-1 shrink-0">
+                  Rx
+                </span>
+              )}
+            </div>
+            <p className="text-gray-500 text-[11px] font-mono mt-0.5">
+              Rs {fmt(item.unitPrice)} × {item.quantity} {item.unit}
+              {atMax && <span className="text-amber-400 ml-1.5">· max stock</span>}
+            </p>
           </div>
-          <p className="text-gray-600 text-[10px] font-mono mt-0.5">
-            Rs.{item.unitPrice} / {item.unit}
-          </p>
+
+          <span className="font-mono text-[14px] font-semibold text-white tabular shrink-0 mt-0.5">
+            {fmt(item.totalPrice)}
+          </span>
         </div>
 
-        {/* Qty Controls */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <button
-            onClick={handleDecrement}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-600 hover:bg-red-500/10 hover:text-red-400 transition-all duration-100"
-          >
-            <Minus className="w-3.5 h-3.5" />
-          </button>
+        <div className="flex items-center justify-between mt-2 pl-7">
+          {/* Stepper */}
+          <div className="flex items-center h-8 rounded-lg border border-pos-border bg-pos-card overflow-hidden">
+            <button
+              onClick={() => updateQty(item.productId, item.quantity - 1)}
+              className="w-8 h-full flex items-center justify-center text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+              title={item.quantity === 1 ? "Remove" : "Decrease"}
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setShowKeypad(true)}
+              className="min-w-10 h-full px-2 flex items-center justify-center font-mono text-sm font-semibold text-white border-x border-pos-border hover:text-teal-300 hover:bg-white/5 transition-colors tabular"
+              title="Type quantity"
+            >
+              {item.quantity}
+            </button>
+            <button
+              onClick={() => !atMax && updateQty(item.productId, item.quantity + 1)}
+              disabled={atMax}
+              className="w-8 h-full flex items-center justify-center text-gray-400 hover:bg-teal-500/10 hover:text-teal-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Increase"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
           <button
-            onClick={() => setShowKeypad(true)}
-            className="w-8 h-7 flex items-center justify-center font-mono text-sm text-white hover:text-teal-400 transition-colors"
-            title="Edit quantity"
+            onClick={() => removeItem(item.productId)}
+            className="flex items-center gap-1 h-7 px-2 rounded-lg text-[11px] text-gray-500 hover:text-red-400 hover:bg-red-500/10 opacity-60 group-hover:opacity-100 transition-all"
+            title="Remove item"
           >
-            {item.quantity}
-          </button>
-
-          <button
-            onClick={handleIncrement}
-            disabled={item.quantity >= item.maxStock}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-600 hover:bg-teal-500/10 hover:text-teal-400 transition-all duration-100 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <Plus className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5" />
+            Remove
           </button>
         </div>
-
-        {/* Total */}
-        <span className="font-mono text-sm text-teal-400 w-14 text-right flex-shrink-0">
-          Rs.{item.totalPrice}
-        </span>
-
-        {/* Remove */}
-        <button
-          onClick={() => removeItem(item.productId)}
-          className="w-5 h-5 flex items-center justify-center text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
       </motion.div>
 
-      {/* Numeric Keypad Modal */}
       <AnimatePresence>
         {showKeypad && (
           <NumericKeypad
             initial={item.quantity}
             max={item.maxStock}
-            label={`Qty: ${item.nameEn}`}
-            onConfirm={handleQtyChange}
+            label={item.nameEn}
+            onConfirm={(qty) => {
+              updateQty(item.productId, qty)
+              setShowKeypad(false)
+            }}
             onClose={() => setShowKeypad(false)}
           />
         )}

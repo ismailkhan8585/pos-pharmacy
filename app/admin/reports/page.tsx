@@ -136,12 +136,12 @@ export default function AdminReportsPage() {
             {topProducts.map((p, idx) => (
               <div key={p.name} className="py-2.5 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5 min-w-0 mr-2">
-                  <span className="w-5 h-5 rounded-full bg-pos-panel border border-pos-border text-[10px] font-bold text-gray-400 flex items-center justify-center flex-shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-pos-panel border border-pos-border text-[10px] font-bold text-gray-400 flex items-center justify-center shrink-0">
                     {idx + 1}
                   </span>
                   <span className="font-medium text-white truncate">{p.name}</span>
                 </div>
-                <div className="text-right flex-shrink-0">
+                <div className="text-right shrink-0">
                   <span className="font-mono font-bold text-teal-400">
                     {p.qty} sold
                   </span>

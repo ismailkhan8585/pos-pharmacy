@@ -1,42 +1,43 @@
 "use client"
 
+import { CloudOff, Loader2 } from "lucide-react"
 import { usePOSConnectionStore } from "@/stores/pos-connection"
 
 export default function OfflineBanner() {
   const { isOnline, pendingCount, isSyncing } = usePOSConnectionStore()
 
-  if (isOnline && pendingCount === 0 && !isSyncing) return null
+  if (isOnline && !isSyncing) return null
 
   return (
     <div
-      className={`w-full px-4 py-2 text-[12px] flex items-center justify-between border-b transition-all duration-200 z-10 ${
+      className={`w-full px-4 h-9 text-xs flex items-center justify-between border-b shrink-0 z-10 ${
         !isOnline
-          ? "bg-amber-500/10 border-amber-500/20 text-amber-300"
-          : "bg-blue-500/10 border-blue-500/20 text-blue-300"
+          ? "bg-linear-to-r from-amber-500/15 via-amber-500/5 to-transparent border-amber-500/20"
+          : "bg-linear-to-r from-blue-500/15 via-blue-500/5 to-transparent border-blue-500/20"
       }`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         {!isOnline ? (
           <>
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span className="text-amber-400 font-semibold">Offline Mode Active</span>
-            <span className="text-gray-400 hidden sm:inline">
-              — Sales saved locally in browser · 80mm printing works normally
+            <CloudOff className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="text-amber-300 font-semibold">Offline mode</span>
+            <span className="text-gray-400 truncate hidden sm:inline">
+              — keep selling. Sales are saved on this device and sync automatically when you're back online.
             </span>
           </>
         ) : (
           <>
-            <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-            <span className="text-blue-400 font-medium">
-              Syncing {pendingCount} offline sale(s) to Supabase...
+            <Loader2 className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+            <span className="text-blue-300 font-medium">
+              Syncing {pendingCount} offline sale{pendingCount === 1 ? "" : "s"} to the cloud…
             </span>
           </>
         )}
       </div>
 
       {!isOnline && pendingCount > 0 && (
-        <span className="text-amber-400/90 font-mono text-[11px] bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
-          {pendingCount} pending sync
+        <span className="text-amber-300 font-mono text-[11px] bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md shrink-0">
+          {pendingCount} waiting to sync
         </span>
       )}
     </div>

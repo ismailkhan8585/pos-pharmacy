@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { PageHeader } from "@/components/ui"
+import { Settings as HeaderIcon } from "lucide-react"
 import {
   Store,
   Printer,
@@ -207,27 +209,25 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-pos-border">
-        <div>
-          <h1 className="text-2xl font-bold font-grotesk text-white tracking-tight">System Settings</h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Configure pharmacy profile, 80mm receipts, payments, alerts & security
-          </p>
-        </div>
+    <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+      <PageHeader
+        icon={HeaderIcon}
+        title="Settings"
+        subtitle="Pharmacy profile, receipts, payments, alerts and security"
+        actions={
         <button
           onClick={handleSaveAll}
           disabled={isSaving}
           className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-white font-semibold shadow-lg shadow-teal-500/20 transition-all active:scale-95 disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
-          {isSaving ? "Saving..." : "Save All Settings"}
+          {isSaving ? "Saving..." : "Save changes"}
         </button>
-      </div>
+        }
+      />
 
       {/* Tabs Navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-pos-border pb-3">
+      <div className="flex flex-wrap gap-1 p-1 rounded-2xl bg-pos-panel border border-pos-border sticky top-0 z-10 backdrop-blur">
         {[
           { id: "store", label: "Pharmacy Profile", icon: Store },
           { id: "receipt", label: "80mm Receipt", icon: Printer },
@@ -242,13 +242,13 @@ export default function SettingsPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all ${
+              className={`flex items-center gap-2 h-10 px-4 rounded-xl font-medium text-sm transition-all ${
                 isActive
-                  ? "bg-teal-500/15 text-teal-400 border border-teal-500/30"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-pos-card border border-transparent"
+                  ? "bg-pos-cardHover text-white shadow-md shadow-black/30 ring-1 ring-white/5"
+                  : "text-gray-400 hover:text-gray-200"
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className={`w-4 h-4 ${isActive ? "text-teal-300" : ""}`} />
               <span>{tab.label}</span>
             </button>
           )
@@ -279,7 +279,7 @@ export default function SettingsPage() {
                 dir="rtl"
                 value={formData.storeNameUr}
                 onChange={(e) => setFormData({ ...formData, storeNameUr: e.target.value })}
-                className="w-full bg-pos-card border border-pos-border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-teal-500 text-sm font-urdu text-lg"
+                className="w-full bg-pos-card border border-pos-border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-teal-500 font-urdu text-lg"
               />
             </div>
             <div>
@@ -410,7 +410,7 @@ export default function SettingsPage() {
             <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 self-start">
               80mm Paper Preview
             </p>
-            <div className="w-[300px] bg-white text-black p-5 rounded shadow-2xl font-mono text-[11px] leading-relaxed select-none">
+            <div className="w-75 bg-white text-black p-5 rounded shadow-2xl font-mono text-[11px] leading-relaxed select-none">
               <div className="text-center font-bold text-sm tracking-wide">{formData.storeName || "AN MedCare"}</div>
               <div className="text-center text-[10px] text-gray-600 font-sans">{formData.storeNameUr}</div>
               <div className="text-center text-[10px]">{formData.ownerName || "Adil Nawaz"}</div>

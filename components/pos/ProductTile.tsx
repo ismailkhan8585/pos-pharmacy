@@ -1,183 +1,232 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
+import { Pill, Minus, Plus } from "lucide-react"
 import { POSProduct } from "@/stores/pos-products"
 import { usePOSCartStore } from "@/stores/pos-cart"
-import { getStockStatus, getStockStripClass } from "@/lib/pos-helpers"
+import { getStockStatus } from "@/lib/pos-helpers"
 import toast from "react-hot-toast"
 
 interface Props {
   product: POSProduct
 }
 
+const STOCK_PILL = {
+  ok: "text-gray-400 bg-white/5 border-white/5",
+  low: "text-amber-300 bg-amber-500/10 border-amber-500/25",
+  out: "text-red-300 bg-red-500/10 border-red-500/25",
+}
+
 export default function ProductTile({ product }: Props) {
-  const { addItem } = usePOSCartStore()
-  const [isFlashing, setIsFlashing] = useState<"teal" | "red" | null>(null)
+  const addItem = usePOSCartStore((s) => s.addItem)
+  const inCartQty = usePOSCartStore((s) => s.items.find((i) => i.productId === product.id)?.quantity ?? 0)
+  const [flash, setFlash] = useState<"teal" | "red" | null>(null)
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressFired = useRef(false)
   const [showQtyPicker, setShowQtyPicker] = useState(false)
   const [pickerQty, setPickerQty] = useState(1)
 
   const stockStatus = getStockStatus(product.stock, product.lowStockAt)
-  const stripClass = getStockStripClass(stockStatus)
   const isOutOfStock = product.stock <= 0
+  const remaining = Math.max(0, product.stock - inCartQty)
+
+  const doFlash = (c: "teal" | "red") => {
+    setFlash(c)
+    setTimeout(() => setFlash(null), 350)
+  }
 
   const handleClick = () => {
-    if (isOutOfStock) {
-      setIsFlashing("red")
-      setTimeout(() => setIsFlashing(null), 300)
-      toast.error(`${product.nameEn} — Out of stock`)
+    if (longPressFired.current) {
+      longPressFired.current = false
       return
     }
-
+    if (isOutOfStock) {
+      doFlash("red")
+      toast.error(`${product.nameEn} — out of stock`)
+      return
+    }
     const result = addItem(product)
-    if (result === "added") {
-      setIsFlashing("teal")
-      setTimeout(() => setIsFlashing(null), 200)
-    } else if (result === "already_max") {
-      toast.error("Max stock reached")
+    if (result === "added") doFlash("teal")
+    else if (result === "already_max") {
+      doFlash("red")
+      toast.error(`Only ${product.stock} in stock`)
     }
   }
 
-  const handleLongPressStart = () => {
+  const openPicker = () => {
+    if (isOutOfStock || remaining <= 0) return
+    setPickerQty(1)
+    setShowQtyPicker(true)
+  }
+
+  const handlePressStart = () => {
+    longPressFired.current = false
     longPressRef.current = setTimeout(() => {
-      if (!isOutOfStock) {
-        setShowQtyPicker(true)
-        setPickerQty(1)
-      }
+      longPressFired.current = true
+      openPicker()
     }, 500)
   }
 
-  const handleLongPressEnd = () => {
-    if (longPressRef.current) {
-      clearTimeout(longPressRef.current)
-    }
+  const handlePressEnd = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current)
   }
 
   const handleAddWithQty = () => {
+    let added = 0
     for (let i = 0; i < pickerQty; i++) {
-      const result = addItem(product)
-      if (result === "already_max") break
+      if (addItem(product) !== "added") break
+      added++
     }
+    if (added < pickerQty) toast.error(`Only ${added} could be added — stock limit`)
     setShowQtyPicker(false)
+    doFlash("teal")
   }
 
   return (
     <div className="relative">
       <motion.button
-        whileTap={{ scale: 0.95 }}
+        whileTap={{ scale: 0.96 }}
         onClick={handleClick}
-        onMouseDown={handleLongPressStart}
-        onMouseUp={handleLongPressEnd}
-        onMouseLeave={handleLongPressEnd}
-        onTouchStart={handleLongPressStart}
-        onTouchEnd={handleLongPressEnd}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          openPicker()
+        }}
+        onMouseDown={handlePressStart}
+        onMouseUp={handlePressEnd}
+        onMouseLeave={handlePressEnd}
+        onTouchStart={handlePressStart}
+        onTouchEnd={handlePressEnd}
+        title={`${product.nameEn}${product.brand ? ` · ${product.brand}` : ""}\nClick to add · Right-click / hold for quantity`}
         className={`
-          relative w-full flex flex-col overflow-hidden
-          rounded-xl border cursor-pointer
-          transition-all duration-150 text-left
-          min-h-[136px]
+          group relative w-full h-37 flex flex-col overflow-hidden text-left
+          rounded-2xl border transition-all duration-150 select-none
           ${
             isOutOfStock
-              ? "bg-pos-card border-pos-border opacity-60"
-              : "bg-pos-card border-pos-border hover:border-teal-500/40 hover:bg-pos-cardHover hover:shadow-lg hover:shadow-teal-500/10 hover:-translate-y-0.5"
+              ? "bg-pos-card/60 border-pos-border cursor-not-allowed"
+              : inCartQty > 0
+              ? "bg-pos-card border-teal-500/50 shadow-[0_0_0_1px_rgba(16,185,129,0.25),0_10px_30px_-12px_rgba(16,185,129,0.35)]"
+              : "bg-pos-card border-pos-border hover:border-teal-500/40 hover:bg-pos-cardHover hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/40"
           }
         `}
       >
         {/* Flash overlay */}
-        {isFlashing && (
+        {flash && (
           <div
-            className={`absolute inset-0 z-10 rounded-xl pointer-events-none ${
-              isFlashing === "teal" ? "flash-teal" : "flash-red"
+            className={`absolute inset-0 z-10 rounded-2xl pointer-events-none ${
+              flash === "teal" ? "flash-teal" : "flash-red"
             }`}
           />
         )}
 
-        {/* Stock strip (top) */}
-        <div className={`h-1 w-full ${stripClass} flex-shrink-0`} />
-
-        {/* Rx badge */}
-        {product.requiresPrescription && (
-          <div className="absolute top-2 right-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/40 rounded text-[9px] font-bold px-1 py-0.5 leading-none">
-            Rx
+        <div className={`flex flex-col flex-1 p-3 ${isOutOfStock ? "opacity-45" : ""}`}>
+          {/* Top row: icon + badges */}
+          <div className="flex items-start justify-between gap-1 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/15 flex items-center justify-center text-sm shrink-0">
+              {product.categoryIcon ? (
+                <span className="leading-none">{product.categoryIcon}</span>
+              ) : (
+                <Pill className="w-4 h-4 text-teal-400" />
+              )}
+            </div>
+            {product.requiresPrescription && (
+              <span className="bg-blue-500/15 text-blue-300 border border-blue-500/30 rounded-md text-[10px] font-bold px-1.5 py-0.5 leading-none">
+                Rx
+              </span>
+            )}
           </div>
-        )}
 
-        {/* Content */}
-        <div className="flex flex-col flex-1 p-2.5 pt-2">
-          <p className="text-white text-[13px] font-medium leading-tight line-clamp-2 pr-4">
-            {product.nameEn}
+          {/* Name */}
+          <p className="text-white text-[13px] font-semibold leading-snug line-clamp-2">{product.nameEn}</p>
+          <p className="text-gray-500 text-[11px] mt-0.5 truncate">
+            {product.brand || product.categoryName || " "}
           </p>
-          {product.brand && (
-            <p className="text-gray-600 text-[10px] mt-0.5 truncate">{product.brand}</p>
-          )}
 
           <div className="flex-1" />
 
           {/* Bottom row: price + stock */}
-          <div className="flex items-center justify-between mt-1.5">
-            <span className="font-mono text-sm font-bold text-teal-400">
-              Rs.{product.sellPrice}
-            </span>
-
+          <div className="flex items-end justify-between gap-1 mt-1">
+            <div className="leading-none">
+              <span className="text-[10px] text-gray-500 mr-0.5">Rs</span>
+              <span className="font-mono text-[17px] font-bold text-teal-300 tabular">
+                {product.sellPrice.toLocaleString("en-PK")}
+              </span>
+              <span className="block text-[10px] text-gray-500 mt-1">per {product.unit || "pcs"}</span>
+            </div>
             <span
-              className={`font-mono text-[10px] ${
-                stockStatus === "ok"
-                  ? "text-gray-600"
-                  : stockStatus === "low"
-                  ? "text-amber-400 animate-pulse"
-                  : "text-red-400"
-              }`}
+              className={`font-mono text-[10px] px-1.5 py-0.5 rounded-md border tabular ${STOCK_PILL[stockStatus]}`}
             >
-              {product.stock <= 0 ? "0" : product.stock}
+              {isOutOfStock ? "Out" : stockStatus === "low" ? `Low ${product.stock}` : product.stock}
             </span>
           </div>
         </div>
+
+        {isOutOfStock && (
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-red-500/60" />
+        )}
       </motion.button>
 
-      {/* Long-press Qty Picker */}
+      {/* In-cart quantity badge */}
+      <AnimatePresence>
+        {inCartQty > 0 && (
+          <motion.span
+            key={inCartQty}
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.4, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 22 }}
+            className="absolute -top-2 -right-2 z-10 min-w-6 h-6 px-1.5 rounded-full bg-teal-500 text-white text-xs font-bold font-mono flex items-center justify-center ring-4 ring-pos-panel shadow-lg shadow-teal-500/40 pointer-events-none"
+          >
+            {inCartQty}
+          </motion.span>
+        )}
+      </AnimatePresence>
+
+      {/* Quantity Picker */}
       {showQtyPicker && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 animate-pop-in">
-          <div className="bg-pos-modal border border-pos-border rounded-xl p-3 shadow-2xl shadow-black/50 min-w-[160px]">
-            <p className="text-gray-500 text-[10px] text-center mb-2 truncate">{product.nameEn}</p>
-            <div className="flex items-center gap-2 mb-3">
-              <button
-                onClick={() => setPickerQty((q) => Math.max(1, q - 1))}
-                className="w-8 h-8 flex items-center justify-center bg-pos-card rounded-lg text-white hover:bg-pos-cardHover transition-colors"
-              >
-                −
-              </button>
-              <span className="font-mono text-white text-lg w-8 text-center">{pickerQty}</span>
-              <button
-                onClick={() => setPickerQty((q) => Math.min(product.stock, q + 1))}
-                className="w-8 h-8 flex items-center justify-center bg-pos-card rounded-lg text-white hover:bg-pos-cardHover transition-colors"
-              >
-                +
-              </button>
-            </div>
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => setShowQtyPicker(false)}
-                className="flex-1 h-8 rounded-lg text-gray-500 text-xs hover:bg-pos-card transition-colors"
-              >
-                Cancel
-              </button>
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setShowQtyPicker(false)} />
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 animate-pop-in">
+            <div className="glass border border-pos-borderHi rounded-2xl p-3 min-w-45">
+              <p className="text-gray-300 text-xs font-medium text-center mb-2 truncate max-w-40">
+                {product.nameEn}
+              </p>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <button
+                  onClick={() => setPickerQty((q) => Math.max(1, q - 1))}
+                  className="w-9 h-9 flex items-center justify-center bg-pos-card border border-pos-border rounded-xl text-white hover:bg-pos-cardHover"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="font-mono text-white text-xl font-bold w-10 text-center tabular">{pickerQty}</span>
+                <button
+                  onClick={() => setPickerQty((q) => Math.min(remaining, q + 1))}
+                  className="w-9 h-9 flex items-center justify-center bg-pos-card border border-pos-border rounded-xl text-white hover:bg-pos-cardHover"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex gap-1.5 mb-2">
+                {[5, 10, 20].filter((n) => n <= remaining).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setPickerQty(n)}
+                    className="flex-1 h-7 rounded-lg text-[11px] font-mono border border-pos-border bg-pos-card text-gray-400 hover:text-white"
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
               <button
                 onClick={handleAddWithQty}
-                className="flex-1 h-8 rounded-lg bg-teal-500 text-white text-xs font-medium hover:bg-teal-600 transition-colors"
+                className="w-full h-9 rounded-xl bg-teal-500 text-white text-sm font-semibold hover:bg-teal-400 transition-colors"
               >
-                Add {pickerQty}
+                Add {pickerQty} · Rs {(pickerQty * product.sellPrice).toLocaleString("en-PK")}
               </button>
+              <p className="text-[10px] text-gray-500 text-center mt-1.5">{remaining} available</p>
             </div>
           </div>
-          {/* Arrow */}
-          <div className="w-2 h-2 bg-pos-border rotate-45 mx-auto -mt-1 border-r border-b border-pos-border" />
-        </div>
-      )}
-
-      {/* Close picker on outside click */}
-      {showQtyPicker && (
-        <div className="fixed inset-0 z-10" onClick={() => setShowQtyPicker(false)} />
+        </>
       )}
     </div>
   )
